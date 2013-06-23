@@ -215,6 +215,7 @@
 						# combine
 						$proborder[$class] *= $probability;
 					}
+					# TODO normalise to avoid zeroing out (rounding) TODO
 				}
 			}
 			# set for next word
