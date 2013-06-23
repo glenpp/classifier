@@ -109,7 +109,7 @@
 		my $total = 0;
 		my $bindclassifications = '';
 		foreach my $class (@$classifications) {
-			$st = $self->{'dbh'}->prepare ( 'SELECT Frequency FROM ClassifierClassSamples WHERE Class = :class' );
+			$st = $self->{'dbh'}->prepare ( 'SELECT Frequency FROM ClassifierClassSamples WHERE Class = ?' );
 			$st->execute ( $class );
 			my $result = $st->fetchrow_hashref ();
 			if ( ! defined $$result{'Frequency'} ) {
@@ -163,6 +163,7 @@
 						if ( ! $self->{'unbiased'} ) { $topline[$class] *= $overallprob[$class]; }
 						$divisor += $topline[$class];
 				}
+				my $zerorisk = 0;	# flag if we have a risk of zeroing out
 				foreach my $class (@$classifications) {
 					my $probability = $topline[$class] / $divisor;
 					# correct for few occurances
@@ -173,8 +174,23 @@
 					if ( $quality < 0.3 ) { next; }
 					# combine
 					$prob[$class] *= $probability;
+					# check risk of zeroing out
+					if ( $prob[$class] <= 1e-200 ) { $zerorisk = 1; }
 				}
-					# word order frequency
+				# if needed normalise to avoid zeroing out (rounding)
+				if ( $zerorisk ) {
+					my $ntotal = 0;
+					foreach my $class (@$classifications) {
+						$ntotal += $prob[$class];
+					}
+					# avoid divide by Zero - we have probably rounded if this happens
+					if ( $ntotal == 0 ) { $ntotal = 1; }
+					# convert to normal probabilities
+					foreach my $class (@$classifications) {
+						$prob[$class] /= $ntotal;
+					}
+				}
+				# word order frequency
 				my $count = 1;
 				if ( ! defined $prevword ) {
 					$st = $self->{'dbh'}->prepare ( 'SELECT Class,Frequency FROM ClassifierOrderFrequency WHERE Word = (SELECT id FROM ClassifierWords WHERE Word = ?) AND PrevWord IS NULL AND Class IN ('.$bindclassifications.')' );
@@ -204,6 +220,7 @@
 							if ( ! $self->{'unbiased'} ) { $topline[$class] *= $overallprob[$class]; }
 							$divisor += $topline[$class];
 					}
+					$zerorisk = 0;	# flag if we have a risk of zeroing out
 					foreach my $class (keys %wordfrequency) {
 						my $probability = $topline[$class] / $divisor;
 						# correct for few occurances
@@ -214,8 +231,22 @@
 						if ( $quality < 0.3 ) { next; }
 						# combine
 						$proborder[$class] *= $probability;
+						# check risk of zeroing out
+						if ( $proborder[$class] <= 1e-200 ) { $zerorisk = 1; }
 					}
-					# TODO normalise to avoid zeroing out (rounding) TODO
+					# if needed normalise to avoid zeroing out (rounding)
+					if ( $zerorisk ) {
+						my $ntotal = 0;
+						foreach my $class (@$classifications) {
+							$ntotal += $proborder[$class];
+						}
+						# avoid divide by Zero - we have probably rounded if this happens
+						if ( $ntotal == 0 ) { $ntotal = 1; }
+						# convert to normal probabilities
+						foreach my $class (@$classifications) {
+							$proborder[$class] /= $ntotal;
+						}
+					}
 				}
 			}
 			# set for next word
@@ -228,6 +259,10 @@
 			$total += $prob[$class];
 			$totalorder += $proborder[$class];
 		}
+		# avoid divide by Zero - we have probably rounded if this happens
+		if ( $total == 0 ) { $total = 1; }
+		if ( $totalorder == 0 ) { $totalorder = 1; }
+		# convert to normal probabilities
 		foreach my $class (@$classifications) {
 			$prob[$class] /= $total;
 			$proborder[$class] /= $totalorder;

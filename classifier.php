@@ -156,6 +156,7 @@ class classifier {
 						if ( ! $this->unbiased ) { $topline[$class] *= $overallprob[$class]; }
 						$divisor += $topline[$class];
 				}
+				$zerorisk = false;	// flag if we have a risk of zeroing out
 				foreach ( $classifications as $class ) {
 					$probability = $topline[$class] / $divisor;
 					// correct for few occurances
@@ -166,6 +167,21 @@ class classifier {
 					if ( $quality < 0.3 ) { continue; }
 					// combine
 					$prob[$class] *= $probability;
+					//check risk of zeroing out
+					if ( $prob[$class] <= 1e-200 ) { $zerorisk = 1; }
+				}
+				// if needed normalise to avoid zeroing out (rounding)
+				if ( $zerorisk ) {
+						$ntotal = 0;
+						foreach ($classifications as $class) {
+							$ntotal += $prob[$class];
+						}
+						# avoid divide by Zero - we have probably rounded if this happens
+						if ( $ntotal == 0 ) { $ntotal = 1; }
+						# convert to normal probabilities
+						foreach ($classifications as $class) {
+							$prob[$class] /= $ntotal;
+						}
 				}
 				// word order frequency
 				$count = 1;
@@ -197,6 +213,7 @@ class classifier {
 							if ( ! $this->unbiased ) { $topline[$class] *= $overallprob[$class]; }
 							$divisor += $topline[$class];
 					}
+					$zerorisk = false;	// flag if we have a risk of zeroing out
 					foreach ( $classifications as $class ) {
 						$probability = $topline[$class] / $divisor;
 						// correct for few occurances
@@ -207,6 +224,21 @@ class classifier {
 						if ( $quality < 0.3 ) { continue; }
 						// combine
 						$proborder[$class] *= $probability;
+						//check risk of zeroing out
+						if ( $proborder[$class] <= 1e-200 ) { $zerorisk = 1; }
+					}
+					// if needed normalise to avoid zeroing out (rounding)
+					if ( $zerorisk ) {
+							$ntotal = 0;
+							foreach ($classifications as $class) {
+								$ntotal += $proborder[$class];
+							}
+							# avoid divide by Zero - we have probably rounded if this happens
+							if ( $ntotal == 0 ) { $ntotal = 1; }
+							# convert to normal probabilities
+							foreach ($classifications as $class) {
+								$proborder[$class] /= $ntotal;
+							}
 					}
 				}
 			}
@@ -220,6 +252,10 @@ class classifier {
 			$total += $prob[$class];
 			$totalorder += $proborder[$class];
 		}
+		// avoid divide by Zero - we have probably rounded if this happens
+		if ( $total == 0 ) { $total = 1; }
+		if ( $totalorder == 0 ) { $totalorder = 1; }
+		// convert to normal probabilities
 		foreach ( $classifications as $class ) {
 			$prob[$class] /= $total;
 			$proborder[$class] /= $totalorder;
