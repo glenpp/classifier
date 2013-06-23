@@ -27,7 +27,7 @@ class classifier {
 	private $words;
 	private $driverclass;
 	public $s = 3;
-	public $unbiased = false;
+	public $unbiased = false;	// give even odds for all classes
 	function classifier ( $dbh, $text ) {
 		$this->dbh = $dbh;
 		if ( strstr ( $dbh->getAttribute ( PDO::ATTR_DRIVER_NAME ), 'sqlite' ) === 0 ) {

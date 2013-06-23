@@ -32,7 +32,7 @@
 		my @words = split /\W+/, lc ( $text );
 		$self->{'words'} = \@words;
 		$self->{'s'} = 3;
-		$self->{'unbiased'} = 0;
+		$self->{'unbiased'} = 0;	# give even odds for all classes
 		return bless $self, $class;
 	}
 	sub teach {
