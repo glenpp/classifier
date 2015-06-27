@@ -32,6 +32,10 @@ class classifier:
 		self.words = re.split ( '\W+', text.lower() )
 		self.s= 3
 		self.unbiased = 0	# give even odds for all clases
+		if str(type(self.db)) == "<class 'MySQLdb.connections.Connection'>":
+			self.dbtype = 'MySQL'
+		elif str(type(self.db)) == "<type 'sqlite3.Connection'>":
+			self.dbtype = 'sqlite3'
 	def teach ( self, classification, strength=None, ordered=None ):	# eg. 1=>HAM 2=>SPAM
 		if strength == None: strength = 1.0
 		if ordered == None: ordered = True
@@ -42,7 +46,10 @@ class classifier:
 			if word == '': continue
 			# put the word in the classification as needed
 			# never delete words so this should be race safe
-			dbcur.execute ( 'SELECT id FROM ClassifierWords WHERE Word = ?', [ word ] )
+			if self.dbtype == 'MySQL':
+				dbcur.execute ( 'SELECT id FROM ClassifierWords WHERE Word = %s', [ word ] )
+			else:
+				dbcur.execute ( 'SELECT id FROM ClassifierWords WHERE Word = ?', [ word ] )
 			result = dbcur.fetchone()
 #			my $wordid;
 			if result != None:
@@ -50,16 +57,19 @@ class classifier:
 				wordid = result[0]
 			else:
 				# oops - missing word - add it
-				dbcur.execute ( 'INSERT INTO ClassifierWords (Word) VALUES (?)', [ word ] )
+				if self.dbtype == 'MySQL':
+					dbcur.execute ( 'INSERT INTO ClassifierWords (Word) VALUES (%s)', [ word ] )
+				else:
+					dbcur.execute ( 'INSERT INTO ClassifierWords (Word) VALUES (?)', [ word ] )
 				wordid = dbcur.lastrowid
 			# SQLite has some limitations - work round them
 #			if ( $self->{'dbh'}->{'Driver'}->{'Name'} ne 'SQLite' ) { TODO how do we do this in python? TODO
-			if False:
+			if self.dbtype == 'MySQL':
 				# insert or update this word frequency
-				dbcur.execute ( 'INSERT INTO ClassifierFrequency (Word,Class,Frequency) Values (?,?,?) ON DUPLICATE KEY UPDATE Frequency = Frequency + ?', [ wordid, classification, strength, strength ] )
+				dbcur.execute ( 'INSERT INTO ClassifierFrequency (Word,Class,Frequency) Values (%s,%s,%s) ON DUPLICATE KEY UPDATE Frequency = Frequency + %s', [ wordid, classification, strength, strength ] )
 				# insert or update this word order frequency
 				if ordered:
-					dbcur.execute ( 'INSERT INTO ClassifierOrderFrequency (Word,PrevWord,Class,Frequency) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE Frequency = Frequency + ?', [ wordid, prevwordid, classification, strength, strength ] )
+					dbcur.execute ( 'INSERT INTO ClassifierOrderFrequency (Word,PrevWord,Class,Frequency) VALUES (%s,%s,%s,%s) ON DUPLICATE KEY UPDATE Frequency = Frequency + %s', [ wordid, prevwordid, classification, strength, strength ] )
 			else:
 				# long way rount for SQLite
 				# insert or update this word frequency
@@ -72,8 +82,8 @@ class classifier:
 			# set for next word
 			prevwordid = wordid;
 #		if ( $self->{'dbh'}->{'Driver'}->{'Name'} ne 'SQLite' ) {	TODO how do we do this in python? TODO
-		if False:
-			dbcur.execute ( 'INSERT INTO ClassifierClassSamples (Class,Frequency) VALUES (?,?) ON DUPLICATE KEY UPDATE Frequency = Frequency + ?', [ classification, strength, strength ] )
+		if self.dbtype == 'MySQL':
+			dbcur.execute ( 'INSERT INTO ClassifierClassSamples (Class,Frequency) VALUES (%s,%s) ON DUPLICATE KEY UPDATE Frequency = Frequency + %s', [ classification, strength, strength ] )
 		else:
 			# long way rount for SQLite
 			dbcur.execute ( 'INSERT OR IGNORE INTO ClassifierClassSamples (Class,Frequency) VALUES (?,0)', [ classification ] );
@@ -88,15 +98,22 @@ class classifier:
 		bindclassifications = ''
 		dbcur = self.db.cursor()
 		for clas in classifications:
-			dbcur.execute ( 'SELECT Frequency FROM ClassifierClassSamples WHERE Class = ?', [ clas ] )
+			if self.dbtype == 'MySQL':
+				dbcur.execute ( 'SELECT Frequency FROM ClassifierClassSamples WHERE Class = %s', [ clas ] )
+			else:
+				dbcur.execute ( 'SELECT Frequency FROM ClassifierClassSamples WHERE Class = ?', [ clas ] )
 			result = dbcur.fetchone()
 			if result == None:
 				# never seen this clas before - can't clasify
 				return None
 			messages[clas] = result[0]
+			if messages[clas] == 0.0: messages[clas] = 1e-12	# use a safe tiny value so the math works TODO in other versions
 			total += result[0]
 			if bindclassifications != '': bindclassifications += ','
-			bindclassifications += '?';
+			if self.dbtype == 'MySQL':
+				bindclassifications += '%s';
+			else:
+				bindclassifications += '?';
 		# work out overall probability of each clas
 		overallprob = {}
 		for clas in classifications:
@@ -113,7 +130,10 @@ class classifier:
 			# word frequency
 			parameters = [ word ]
 			parameters.extend ( classifications )
-			dbcur.execute ( 'SELECT Class,Frequency FROM ClassifierFrequency WHERE Word = (SELECT id FROM ClassifierWords WHERE Word = ?) AND Class IN ('+bindclassifications+')', parameters )
+			if self.dbtype == 'MySQL':
+				dbcur.execute ( 'SELECT Class,Frequency FROM ClassifierFrequency WHERE Word = (SELECT id FROM ClassifierWords WHERE Word = %s) AND Class IN ('+bindclassifications+')', parameters )
+			else:
+				dbcur.execute ( 'SELECT Class,Frequency FROM ClassifierFrequency WHERE Word = (SELECT id FROM ClassifierWords WHERE Word = ?) AND Class IN ('+bindclassifications+')', parameters )
 			results = dbcur.fetchall()
 			wordfrequency = {}
 			total = 0
@@ -158,11 +178,17 @@ class classifier:
 				parameters = [ word ]
 				if prevword == None:
 					parameters.extend ( classifications )
-					dbcur.execute ( 'SELECT Class,Frequency FROM ClassifierOrderFrequency WHERE Word = (SELECT id FROM ClassifierWords WHERE Word = ?) AND PrevWord IS NULL AND Class IN ('+bindclassifications+')', parameters )
+					if self.dbtype == 'MySQL':
+						dbcur.execute ( 'SELECT Class,Frequency FROM ClassifierOrderFrequency WHERE Word = (SELECT id FROM ClassifierWords WHERE Word = %s) AND PrevWord IS NULL AND Class IN ('+bindclassifications+')', parameters )
+					else:
+						dbcur.execute ( 'SELECT Class,Frequency FROM ClassifierOrderFrequency WHERE Word = (SELECT id FROM ClassifierWords WHERE Word = ?) AND PrevWord IS NULL AND Class IN ('+bindclassifications+')', parameters )
 				else:
 					parameters.append ( prevword )
 					parameters.extend ( classifications )
-					dbcur.execute ( 'SELECT Class,Frequency FROM ClassifierOrderFrequency WHERE Word = (SELECT id FROM ClassifierWords WHERE Word = ?) AND PrevWord = (SELECT id FROM ClassifierWords WHERE Word = ?) AND Class IN ('+bindclassifications+')', parameters )
+					if self.dbtype == 'MySQL':
+						dbcur.execute ( 'SELECT Class,Frequency FROM ClassifierOrderFrequency WHERE Word = (SELECT id FROM ClassifierWords WHERE Word = %s) AND PrevWord = (SELECT id FROM ClassifierWords WHERE Word = %s) AND Class IN ('+bindclassifications+')', parameters )
+					else:
+						dbcur.execute ( 'SELECT Class,Frequency FROM ClassifierOrderFrequency WHERE Word = (SELECT id FROM ClassifierWords WHERE Word = ?) AND PrevWord = (SELECT id FROM ClassifierWords WHERE Word = ?) AND Class IN ('+bindclassifications+')', parameters )
 				results = dbcur.fetchall()
 				total = 0
 				for result in results:
@@ -231,9 +257,14 @@ class classifier:
 	# do degrading of existing data so that fresh data takes prescedence
 	def degrade ( self, factor ):	# 0.9 would multiply everything by that
 		dbcur = self.db.cursor()
-		dbcur.execute ( 'UPDATE ClassifierFrequency SET Frequency = Frequency * :factor', [ factor ] )
-		dbcur.execute ( 'UPDATE ClassifierOrderFrequency SET Frequency = Frequency * :factor', [ factor ] )
-		dbcur.execute ( 'UPDATE ClassifierClassSamples SET Frequency = Frequency * :factor', [ factor ] )
+		if self.dbtype == 'MySQL':
+			dbcur.execute ( 'UPDATE ClassifierFrequency SET Frequency = Frequency * %s', [ factor ] )
+			dbcur.execute ( 'UPDATE ClassifierOrderFrequency SET Frequency = Frequency * %s', [ factor ] )
+			dbcur.execute ( 'UPDATE ClassifierClassSamples SET Frequency = Frequency * %s', [ factor ] )
+		else:
+			dbcur.execute ( 'UPDATE ClassifierFrequency SET Frequency = Frequency * :factor', [ factor ] )
+			dbcur.execute ( 'UPDATE ClassifierOrderFrequency SET Frequency = Frequency * :factor', [ factor ] )
+			dbcur.execute ( 'UPDATE ClassifierClassSamples SET Frequency = Frequency * :factor', [ factor ] )
 		self.db.commit()	# finish transaction to avoid slow synchronous writes
 	# calculate quality factor for words
 	def updatequality ( self, limit=None ):	# how many words to process (oldest first)
@@ -247,7 +278,10 @@ class classifier:
 		total = 0.0
 		bindclassifications = ''
 		for clas in classifications:
-			dbcur.execute ( 'SELECT Frequency FROM ClassifierClassSamples WHERE Class = ?', [ clas ] );
+			if self.dbtype == 'MySQL':
+				dbcur.execute ( 'SELECT Frequency FROM ClassifierClassSamples WHERE Class = %s', [ clas ] );
+			else:
+				dbcur.execute ( 'SELECT Frequency FROM ClassifierClassSamples WHERE Class = ?', [ clas ] );
 			result = dbcur.fetchone ()
 			if result == None:
 				# never seen this clas before - can't clasify
@@ -255,7 +289,10 @@ class classifier:
 			messages[clas] = result[0]
 			total += result[0]
 			if bindclassifications != '': bindclassifications += ','
-			bindclassifications += '?'
+			if self.dbtype == 'MySQL':
+				bindclassifications += '%s'
+			else:
+				bindclassifications += '?'
 		# work out overall probability of each clas
 		overallprob = {}
 		for clas in classifications:
@@ -274,7 +311,10 @@ class classifier:
 			# word frequency
 			parameters = [ word ]
 			parameters.extend ( classifications )
-			dbcur.execute ( 'SELECT Class,Frequency FROM ClassifierFrequency WHERE Word = (SELECT id FROM ClassifierWords WHERE Word = ?) AND Class IN ('+bindclassifications+')', parameters );
+			if self.dbtype == 'MySQL':
+				dbcur.execute ( 'SELECT Class,Frequency FROM ClassifierFrequency WHERE Word = (SELECT id FROM ClassifierWords WHERE Word = %s) AND Class IN ('+bindclassifications+')', parameters );
+			else:
+				dbcur.execute ( 'SELECT Class,Frequency FROM ClassifierFrequency WHERE Word = (SELECT id FROM ClassifierWords WHERE Word = ?) AND Class IN ('+bindclassifications+')', parameters );
 			results = dbcur.fetchall()
 			wordfrequency = {}
 			total = 0.0
@@ -301,10 +341,16 @@ class classifier:
 					# account for word quality
 					quality = abs ( probability - 1.0/qualityfactor ) * qualityfactor
 					if quality > maxquality: maxquality = quality
-				dbcur.execute ( 'UPDATE ClassifierWords SET Quality = :quality, LastUpdated = :time WHERE Word = :word', [ maxquality, time.time(), word ] )
+				if self.dbtype == 'MySQL':
+					dbcur.execute ( 'UPDATE ClassifierWords SET Quality = %s, LastUpdated = %s WHERE Word = %s', [ maxquality, time.time(), word ] )
+				else:
+					dbcur.execute ( 'UPDATE ClassifierWords SET Quality = :quality, LastUpdated = :time WHERE Word = :word', [ maxquality, time.time(), word ] )
 			else:
 # TODO				print STDERR "WARNING - ".__FILE__." - no Frequency data for word \"$word\"\n";
-				dbcur.execute ( 'UPDATE ClassifierWords SET LastUpdated = :time WHERE Word = :word', [ time.time(), word ] )
+				if self.dbtype == 'MySQL':
+					dbcur.execute ( 'UPDATE ClassifierWords SET LastUpdated = %s WHERE Word = %s', [ time.time(), word ] )
+				else:
+					dbcur.execute ( 'UPDATE ClassifierWords SET LastUpdated = :time WHERE Word = :word', [ time.time(), word ] )
 		self.db.commit()	# finish transaction to avoid slow synchronous writes
 
 
