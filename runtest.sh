@@ -48,6 +48,10 @@ TEXT7
 	rm _test_${1}.sqlite3
 }
 
+if [ $# -ne 1 -o ! -f "$1" ]; then
+	echo "Usage: $0 <classifier cli prog to use>" >&2
+	exit 1
+fi
 runtest $1
 
 
