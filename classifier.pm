@@ -29,7 +29,7 @@
 		my ( $class, $dbh, $text ) = @_;
 		my $self = {};
 		$self->{'dbh'} = $dbh;
-		my @words = split /\W+/, lc ( $text );
+		my @words = map { my $s = $_; $s =~ s/^(.{1,40}).*$/$1/; $s } split(/\W+/, lc ( $text ));
 		$self->{'words'} = \@words;
 		$self->{'s'} = 3;
 		$self->{'unbiased'} = 0;	# give even odds for all classes
@@ -55,7 +55,7 @@
 				$wordid = $$result{'id'};
 			} else {
 				# oops - missing word - add it
-				$st = $self->{'dbh'}->prepare ( 'INSERT INTO ClassifierWords (Word) VALUES (:word)' );
+				$st = $self->{'dbh'}->prepare ( 'INSERT INTO ClassifierWords (Word) VALUES (:word)' );	# TODO allow for dup keys (in Python) on MySQL
 				$st->execute ( $word );
 				$wordid = $self->{'dbh'}->last_insert_id ( '','','','' );
 			}
@@ -117,7 +117,8 @@
 				return undef;
 			}
 			$messages[$class] = $$result{'Frequency'};
-			$total += $$result{'Frequency'};
+			if ( $messages[$class] == 0.0 ) { $messages[$class] = 1e-12; }	# use a safe tiny value so the math works
+			$total += $messages[$class];
 			if ( $bindclassifications ne '' ) { $bindclassifications .= ','; }
 			$bindclassifications .= '?';
 		}

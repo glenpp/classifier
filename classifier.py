@@ -17,7 +17,8 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #
 #
-# See: TODO https://www.pitt-pladdy.com/blog/_20111229-214727_0000_Bayesian_Classifier_Classes_for_Perl_and_PHP/
+# See: https://www.pitt-pladdy.com/blog/_20150707-214047_0100_Bayesian_Classifier_Classes_for_Python/
+# Previously: https://www.pitt-pladdy.com/blog/_20111229-214727_0000_Bayesian_Classifier_Classes_for_Perl_and_PHP/
 #
 
 # based on: http://en.wikipedia.org/wiki/Bayesian_spam_filtering#Computing_the_probability_that_a_message_containing_a_given_word_is_spam
@@ -29,8 +30,8 @@ class classifier:
 	def __init__ ( self, db, text ):
 		self.db = db;
 		self.db.isolation_level = "DEFERRED"
-		self.words = re.split ( '\W+', text.lower() )
-		self.s= 3
+		self.words = [ s[:40] for s in re.split ( '\W+', text.lower() ) ]	# TODO limit lengths in other flavours TODO
+		self.s = 3
 		self.unbiased = 0	# give even odds for all clases
 		if str(type(self.db)) == "<class 'MySQLdb.connections.Connection'>":
 			self.dbtype = 'MySQL'
@@ -58,12 +59,11 @@ class classifier:
 			else:
 				# oops - missing word - add it
 				if self.dbtype == 'MySQL':
-					dbcur.execute ( 'INSERT INTO ClassifierWords (Word) VALUES (%s)', [ word ] )
+					dbcur.execute ( 'INSERT INTO ClassifierWords (Word) VALUES (%s) ON DUPLICATE KEY UPDATE Word=Word', [ word ] )
 				else:
 					dbcur.execute ( 'INSERT INTO ClassifierWords (Word) VALUES (?)', [ word ] )
 				wordid = dbcur.lastrowid
 			# SQLite has some limitations - work round them
-#			if ( $self->{'dbh'}->{'Driver'}->{'Name'} ne 'SQLite' ) { TODO how do we do this in python? TODO
 			if self.dbtype == 'MySQL':
 				# insert or update this word frequency
 				dbcur.execute ( 'INSERT INTO ClassifierFrequency (Word,Class,Frequency) Values (%s,%s,%s) ON DUPLICATE KEY UPDATE Frequency = Frequency + %s', [ wordid, classification, strength, strength ] )
@@ -81,7 +81,6 @@ class classifier:
 					dbcur.execute ( 'UPDATE ClassifierOrderFrequency SET Frequency = Frequency + ? WHERE Word = ? AND PrevWord = ? AND Class = ?', [ strength, wordid, prevwordid, classification ] )
 			# set for next word
 			prevwordid = wordid;
-#		if ( $self->{'dbh'}->{'Driver'}->{'Name'} ne 'SQLite' ) {	TODO how do we do this in python? TODO
 		if self.dbtype == 'MySQL':
 			dbcur.execute ( 'INSERT INTO ClassifierClassSamples (Class,Frequency) VALUES (%s,%s) ON DUPLICATE KEY UPDATE Frequency = Frequency + %s', [ classification, strength, strength ] )
 		else:
@@ -89,8 +88,8 @@ class classifier:
 			dbcur.execute ( 'INSERT OR IGNORE INTO ClassifierClassSamples (Class,Frequency) VALUES (?,0)', [ classification ] );
 			dbcur.execute ( 'UPDATE ClassifierClassSamples SET Frequency = Frequency + ? WHERE Class = ?', [ strength, classification ] );
 		self.db.commit()	# finish transaction to avoid slow synchronous writes
-	def classify ( self, classifications, useorder=None ):	# $useorder = 0-1 for the factor of order information
-		if useorder == None: useorder = False
+	def classify ( self, classifications, useorder=None ):	# $useorder = 0.0-1.0 for the factor of order information
+		if useorder == None: useorder = 0.0
 		qualityfactor = len( classifications )
 		# we need to know how many samples of each clas to level the instances
 		messages = {}
@@ -107,8 +106,8 @@ class classifier:
 				# never seen this clas before - can't clasify
 				return None
 			messages[clas] = result[0]
-			if messages[clas] == 0.0: messages[clas] = 1e-12	# use a safe tiny value so the math works TODO in other versions
-			total += result[0]
+			if messages[clas] == 0.0: messages[clas] = 1e-12	# use a safe tiny value so the math works
+			total += messages[clas]
 			if bindclassifications != '': bindclassifications += ','
 			if self.dbtype == 'MySQL':
 				bindclassifications += '%s';

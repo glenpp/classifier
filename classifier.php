@@ -35,7 +35,8 @@ class classifier {
 		} else {
 			$this->driverclass = $dbh->getAttribute ( PDO::ATTR_DRIVER_NAME );
 		}
-		$this->words = preg_split ( '/\W+/', strtolower ( $text ) );
+		$this->words = array ();
+		foreach ( preg_split ( '/\W+/', strtolower ( $text ) ) as $s ) { $this->words[] = substr ( $s, 0, 40 ); }	# limit lengths
 	}
 	function teach ( $classification, $strength=1, $ordered=true ) {	// eg. 1=>HAM 2=>SPAM
 		$prevwordid = NULL;
@@ -52,7 +53,7 @@ class classifier {
 				$wordid = $result['id'];
 			} else {
 				// oops - missing word - add it
-				$st = $this->dbh->prepare ( 'INSERT INTO ClassifierWords (Word) VALUES (:word)' );
+				$st = $this->dbh->prepare ( 'INSERT INTO ClassifierWords (Word) VALUES (:word)' );	# TODO allow for dup keys (in Python) on MySQL
 				$st->execute ( array ( ':word'=>$word ) );
 				$wordid = $this->dbh->lastInsertId ();
 			}
@@ -112,7 +113,8 @@ class classifier {
 				return false;
 			}
 			$messages[$class] = $result['Frequency'];
-			$total += $result['Frequency'];
+			if ( $messages[$class] == 0 ) { $messages[$class] = 1e-12; }	# use a safe tiny value so the math works
+			$total += $messages[$class];
 		}
 		// work out overall probability of each class
 		$overallprob = array ();
