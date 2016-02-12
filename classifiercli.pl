@@ -53,6 +53,10 @@ if ( $#ARGV >= 3 and $ARGV[1] eq 'classify' and $ARGV[2] =~ /^\d+$/ and $ARGV[3]
 	my $dbh = DBI->connect ( "DBI:SQLite:dbname=$ARGV[0]",'','',{RaiseError=>+1,AutoCommit=>1} ) or die "Can't connect: ".$DBI::errstr;
 	my $classifier = classifier->new ( $dbh, join ( '', '' ) );
 	$classifier->degrade ( $ARGV[2] );
+} elsif ( $#ARGV == 2 and $ARGV[1] eq 'cleanfrequency' and $ARGV[2] =~ /^[\d\.]+$/ ) {
+	my $dbh = DBI->connect ( "DBI:SQLite:dbname=$ARGV[0]",'','',{RaiseError=>+1,AutoCommit=>1} ) or die "Can't connect: ".$DBI::errstr;
+	my $classifier = classifier->new ( $dbh, join ( '', '' ) );
+	$classifier->cleanfrequency ( $ARGV[2] );
 } else {
 	die "Usage: $0 <sqlite file> [teach <classid> [weighting]|classify <classid> <classid> [classid] [...]|updatequality|degrade <factor>]\n\ttext on STDIN\n";
 }

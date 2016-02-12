@@ -31,16 +31,35 @@ TEXT6
 	./$1 _test_${1}.sqlite3 classify 1 2 <<TEXT7
 Mauris congue leo risus, quis maximus ex pellentesque et. Donec eget nunc et eros facilisis scelerisque. Pellentesque bibendum accumsan nisl, a ornare eros semper at. Aliquam scelerisque felis sit amet volutpat vestibulum. Morbi arcu mauris, imperdiet id porttitor eget, interdum ut ex. Nam lobortis magna at finibus aliquet. Phasellus ornare suscipit malesuada.
 TEXT7
-	echo Data 1
-	sqlite3 _test_${1}.sqlite3 'SELECT * FROM ClassifierWords' | wc -l
-	sqlite3 _test_${1}.sqlite3 'SELECT * FROM ClassifierWords' | md5sum
-	echo Data 2
+	echo Data 1 ClassifierWords
+	sqlite3 _test_${1}.sqlite3 'SELECT * FROM ClassifierWords' | sed 's/|[0-9]\+$/|_timeremoved_/' | wc -l
+	sqlite3 _test_${1}.sqlite3 'SELECT * FROM ClassifierWords' | sed 's/|[0-9]\+$/|_timeremoved_/' | md5sum
+	echo Data 2 ClassifierClassSamples
 	sqlite3 _test_${1}.sqlite3 'SELECT * FROM ClassifierClassSamples' | wc -l
 	sqlite3 _test_${1}.sqlite3 'SELECT * FROM ClassifierClassSamples' | md5sum
-	echo Data 3
+	echo Data 3 ClassifierFrequency
 	sqlite3 _test_${1}.sqlite3 'SELECT * FROM ClassifierFrequency' | wc -l
 	sqlite3 _test_${1}.sqlite3 'SELECT * FROM ClassifierFrequency' | md5sum
-	echo Data 4
+	echo Data 4 ClassifierOrderFrequency
+	sqlite3 _test_${1}.sqlite3 'SELECT * FROM ClassifierOrderFrequency' | wc -l
+	sqlite3 _test_${1}.sqlite3 'SELECT * FROM ClassifierOrderFrequency' | md5sum
+	echo Updatequality
+	./$1 _test_${1}.sqlite3 updatequality
+	echo Degrade
+	./$1 _test_${1}.sqlite3 degrade 0.8
+	echo Cleanfrequency
+	./$1 _test_${1}.sqlite3 cleanfrequency 0.85
+	echo Data 1 ClassifierWords
+	sqlite3 _test_${1}.sqlite3 'SELECT * FROM ClassifierWords' | wc -l
+	# remove quality update time, truncate quality decimal places
+	sqlite3 _test_${1}.sqlite3 'SELECT * FROM ClassifierWords' | sed 's/|\([0-9]\+\(\.[0-9]\{0,6\}\)\?\)[0-9]*|[0-9]\+$/|\1|_timeremoved_/' | md5sum
+	echo Data 2 ClassifierClassSamples
+	sqlite3 _test_${1}.sqlite3 'SELECT * FROM ClassifierClassSamples' | wc -l
+	sqlite3 _test_${1}.sqlite3 'SELECT * FROM ClassifierClassSamples' | md5sum
+	echo Data 3 ClassifierFrequency
+	sqlite3 _test_${1}.sqlite3 'SELECT * FROM ClassifierFrequency' | wc -l
+	sqlite3 _test_${1}.sqlite3 'SELECT * FROM ClassifierFrequency' | md5sum
+	echo Data 4 ClassifierOrderFrequency
 	sqlite3 _test_${1}.sqlite3 'SELECT * FROM ClassifierOrderFrequency' | wc -l
 	sqlite3 _test_${1}.sqlite3 'SELECT * FROM ClassifierOrderFrequency' | md5sum
 	# cleanup

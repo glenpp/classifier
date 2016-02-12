@@ -42,16 +42,20 @@ elif len ( sys.argv ) >= 4 and len ( sys.argv ) <= 5 and sys.argv[2] == 'teach' 
 		classifier.teach ( int(sys.argv[3]) )
 	else:
 		classifier.teach ( int(sys.argv[3]), float ( sys.argv[4] ) )
-elif len ( sys.argv ) == 2 and sys.argv[2] == 'updatequality':
+elif len ( sys.argv ) == 3 and sys.argv[2] == 'updatequality':
 	db = sqlite3.connect ( sys.argv[1] )
 	classifier = classifier.classifier ( db, '' )
 	classifier.unbiased = True
 	classifier.updatequality ()
-elif len ( sys.argv ) == 2 and sys.argv[2] == 'degrade' and re.match ( '^\d+(\.\d+)?$', sys.argv[3] ):
+elif len ( sys.argv ) == 4 and sys.argv[2] == 'degrade' and re.match ( '^\d+(\.\d+)?$', sys.argv[3] ):
 	db = sqlite3.connect ( sys.argv[1] )
 	classifier = classifier.classifier ( db, '' )
 	classifier.degrade ( sys.argv[3] )
+elif len ( sys.argv ) == 4 and sys.argv[2] == 'cleanfrequency' and re.match ( '^\d+(\.\d+)?$', sys.argv[3] ):
+	db = sqlite3.connect ( sys.argv[1] )
+	classifier = classifier.classifier ( db, '' )
+	classifier.cleanfrequency ( sys.argv[3] )
 else:
-	sys.exit ( "Usage: %s <sqlite file> [teach <clasid> [weighting]|clasify <clasid> <clasid> [clasid] [...]|updatequality|degrade <factor>]\n\ttext on STDIN" % sys.argv[0] )
+	sys.exit ( "Usage: %s <sqlite file> [teach <clasid> [weighting]|clasify <clasid> <clasid> [clasid] [...]|updatequality|degrade <factor>|cleanfrequency <threshold>]\n\ttext on STDIN" % sys.argv[0] )
 
 

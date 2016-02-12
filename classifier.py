@@ -265,6 +265,18 @@ class classifier:
 			dbcur.execute ( 'UPDATE ClassifierOrderFrequency SET Frequency = Frequency * :factor', [ factor ] )
 			dbcur.execute ( 'UPDATE ClassifierClassSamples SET Frequency = Frequency * :factor', [ factor ] )
 		self.db.commit()	# finish transaction to avoid slow synchronous writes
+	# remove words below a certain frequency (unlikely to be of value)
+	def cleanfrequency ( self, threshold ):
+		dbcur = self.db.cursor()
+		if self.dbtype == 'MySQL':
+			dbcur.execute ( 'DELETE FROM ClassifierFrequency WHERE Frequency < %s', [ threshold ] )
+			dbcur.execute ( 'DELETE FROM ClassifierOrderFrequency WHERE Frequency < %s', [ threshold ] )
+		else:
+			dbcur.execute ( 'DELETE FROM ClassifierFrequency WHERE Frequency < :threshold', [ threshold ] )
+			dbcur.execute ( 'DELETE FROM ClassifierOrderFrequency WHERE Frequency < :threshold', [ threshold ] )
+		dbcur.execute ( 'DELETE FROM ClassifierWords WHERE id NOT IN (SELECT Word FROM ClassifierFrequency) AND id NOT IN (SELECT Word FROM ClassifierOrderFrequency) AND id NOT IN (SELECT PrevWord FROM ClassifierOrderFrequency WHERE PrevWord IS NOT NULL)' )
+		self.db.commit()	# finish transaction to avoid slow synchronous writes
+	# remove words below a certain quality (unlikely to be of value) TODO this is tricky since they may just be new ones
 	# calculate quality factor for words
 	def updatequality ( self, limit=None ):	# how many words to process (oldest first)
 		dbcur = self.db.cursor()

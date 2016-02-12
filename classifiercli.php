@@ -53,6 +53,10 @@ if ( $argc >= 5 and $argv[2] == 'classify' and is_numeric ( $argv[3] ) and is_nu
 	$dbh = new PDO ( "sqlite:$argv[1]" );
 	$classifier = new classifier ( $dbh, '' );
 	$classifier->degrade ( $argv[3] );
+} elseif ( $argc == 4 and $argv[2] == 'cleanfrequency' and is_numeric ( $argv[3] ) ) {
+	$dbh = new PDO ( "sqlite:$argv[1]" );
+	$classifier = new classifier ( $dbh, '' );
+	$classifier->cleanfrequency ( $argv[3] );
 } else {
 	die ( "Usage: $0 <sqlite file> [teach <classid> [weighting]|classify <classid> <classid> [classid] [...]|updatequality|degrade <factor>]\n\ttext on STDIN\n" );
 }

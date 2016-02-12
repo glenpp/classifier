@@ -288,6 +288,18 @@ class classifier {
 		$st->execute ( array ( ':factor'=>$factor ) );
 		$this->dbh->commit ();	// finish transaction to avoid slow synchronous writes
 	}
+	// remove words below a certain frequency (unlikely to be of value)
+	function cleanfrequency ( $threshold ) {
+		$this->dbh->beginTransaction ();	// start transaction to avoid slow synchronous writes
+		$st = $this->dbh->prepare ( 'DELETE FROM ClassifierFrequency WHERE Frequency < :threshold' );
+		$st->execute ( array ( ':threshold'=>$threshold ) );
+		$st = $this->dbh->prepare ( 'DELETE FROM ClassifierOrderFrequency WHERE Frequency < :threshold' );
+		$st->execute ( array ( ':threshold'=>$threshold ) );
+		$st = $this->dbh->prepare ( 'DELETE FROM ClassifierWords WHERE id NOT IN (SELECT Word FROM ClassifierFrequency) AND id NOT IN (SELECT Word FROM ClassifierOrderFrequency) AND id NOT IN (SELECT PrevWord FROM ClassifierOrderFrequency WHERE PrevWord IS NOT NULL)' );
+		$st->execute ();
+		$this->dbh->commit ();	// finish transaction to avoid slow synchronous writes
+	}
+	// remove words below a certain quality (unlikely to be of value) TODO this is tricky since they may just be new ones
 	// calculate quality factor for words
 	function updatequality ( $limit=NULL ) {
 		// get classes

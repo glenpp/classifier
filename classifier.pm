@@ -300,6 +300,20 @@
 		$st->execute ( $factor );
 		$self->{'dbh'}->commit();	# finish transaction to avoid slow synchronous writes
 	}
+	# remove words below a certain frequency (unlikely to be of value)
+	sub cleanfrequency {
+		my ( $self, $threshold ) = @_;
+		my $st;
+		$self->{'dbh'}->begin_work ();	# start transaction to avoid slow synchronous writes
+		$st = $self->{'dbh'}->prepare ( 'DELETE FROM ClassifierFrequency WHERE Frequency < :threshold' );
+		$st->execute ( $threshold );
+		$st = $self->{'dbh'}->prepare ( 'DELETE FROM ClassifierOrderFrequency WHERE Frequency < :threshold' );
+		$st->execute ( $threshold );
+		$st = $self->{'dbh'}->prepare ( 'DELETE FROM ClassifierWords WHERE id NOT IN (SELECT Word FROM ClassifierFrequency) AND id NOT IN (SELECT Word FROM ClassifierOrderFrequency) AND id NOT IN (SELECT PrevWord FROM ClassifierOrderFrequency WHERE PrevWord IS NOT NULL)' );
+		$st->execute ();
+		$self->{'dbh'}->commit();	# finish transaction to avoid slow synchronous writes
+	}
+	# remove words below a certain quality (unlikely to be of value) TODO this is tricky since they may just be new ones
 	# calculate quality factor for words
 	sub updatequality {
 		my ( $self, $limit ) = @_;	# how many words to process (oldest first)
