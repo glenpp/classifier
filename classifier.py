@@ -318,7 +318,7 @@ class classifier:
 			wordfrequency = {}
 			total = 0.0
 			for result in results:
-				wordfrequency[result[0]] = resulit[1] / messages[result[0]]
+				wordfrequency[result[0]] = result[1] / messages[result[0]]
 				total += result[1]
 			for clas in classifications:
 				if not clas in wordfrequency:
@@ -341,15 +341,15 @@ class classifier:
 					quality = abs ( probability - 1.0/qualityfactor ) * qualityfactor
 					if quality > maxquality: maxquality = quality
 				if self.dbtype == 'MySQL':
-					dbcur.execute ( 'UPDATE ClassifierWords SET Quality = %s, LastUpdated = %s WHERE Word = %s', [ maxquality, time.time(), word ] )
+					dbcur.execute ( 'UPDATE ClassifierWords SET Quality = %s, LastUpdated = %s WHERE Word = %s', [ maxquality, int(time.time()), word ] )
 				else:
-					dbcur.execute ( 'UPDATE ClassifierWords SET Quality = :quality, LastUpdated = :time WHERE Word = :word', [ maxquality, time.time(), word ] )
+					dbcur.execute ( 'UPDATE ClassifierWords SET Quality = :quality, LastUpdated = :time WHERE Word = :word', [ maxquality, int(time.time()), word ] )
 			else:
 # TODO				print STDERR "WARNING - ".__FILE__." - no Frequency data for word \"$word\"\n";
 				if self.dbtype == 'MySQL':
-					dbcur.execute ( 'UPDATE ClassifierWords SET LastUpdated = %s WHERE Word = %s', [ time.time(), word ] )
+					dbcur.execute ( 'UPDATE ClassifierWords SET LastUpdated = %s WHERE Word = %s', [ int(time.time()), word ] )
 				else:
-					dbcur.execute ( 'UPDATE ClassifierWords SET LastUpdated = :time WHERE Word = :word', [ time.time(), word ] )
+					dbcur.execute ( 'UPDATE ClassifierWords SET LastUpdated = :time WHERE Word = :word', [ int(time.time()), word ] )
 		self.db.commit()	# finish transaction to avoid slow synchronous writes
 
 
