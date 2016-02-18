@@ -26,10 +26,21 @@ import classifier
 import sqlite3
 import sys
 import re
+import os
+
+
+# load & apply stoplist if available
+def stopwordlist ( classifier ):
+	stopwordpath = os.path.join ( os.path.dirname ( sys.argv[0] ), 'stopwords.txt' )
+	with open ( stopwordpath, 'rt' ) as f:
+		stopwords = [ w.strip() for w in f ]
+		classifier.removestopwords ( stopwords )
+
 
 if len(sys.argv) >= 5 and sys.argv[2] == 'classify' and sys.argv[3].isdigit() and sys.argv[4].isdigit():
 	db = sqlite3.connect ( sys.argv[1] )
 	classifier = classifier.classifier ( db, sys.stdin.read() )
+	stopwordlist ( classifier )
 	classifier.unbiased = True
 	clases = [ int(x) for x in sys.argv[3:] ]
 	prob = classifier.classify ( clases )
@@ -38,6 +49,7 @@ if len(sys.argv) >= 5 and sys.argv[2] == 'classify' and sys.argv[3].isdigit() an
 elif len ( sys.argv ) >= 4 and len ( sys.argv ) <= 5 and sys.argv[2] == 'teach' and sys.argv[3].isdigit():
 	db = sqlite3.connect ( sys.argv[1] )
 	classifier = classifier.classifier ( db, sys.stdin.read() )
+	stopwordlist ( classifier )
 	if len ( sys.argv ) >= 4:
 		classifier.teach ( int(sys.argv[3]) )
 	else:

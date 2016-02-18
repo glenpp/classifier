@@ -35,6 +35,17 @@
 		$self->{'unbiased'} = 0;	# give even odds for all classes
 		return bless $self, $class;
 	}
+	# remove words in given list of stop words
+	sub removestopwords {
+		my ( $self, @stopwordlist ) = @_;
+		foreach my $word (@stopwordlist) {
+			my @indexes = grep { $self->{'words'}->[$_] eq lc ( $word ) } 0..$#{$self->{'words'}};
+			foreach my $i (reverse @indexes) {
+				splice ( @{$self->{'words'}}, $i, 1 );
+			}
+		}
+	}
+	# teach the classifier about this text
 	sub teach {
 		my ( $self, $classification, $strength, $ordered ) = @_;	# eg. 1=>HAM 2=>SPAM
 		if ( ! defined $strength ) { $strength = 1; }

@@ -25,10 +25,26 @@ use warnings;
 #BEGIN { unshift @INC, "/path/to/local/lib/perl/"; }
 use classifier;
 use DBI;
+use File::Basename;
+
+
+# load & apply stoplist if available
+sub stopwordlist {
+	my ( $classifier ) = @_;
+	my $stopwordpath = dirname ( $0 ).'/stopwords.txt';
+	if ( -f $stopwordpath and open ( my $fh, '<', $stopwordpath ) ) {
+		my @stopwords = <$fh>;
+		close ( $fh );
+		chomp @stopwords;
+		$classifier->removestopwords ( @stopwords );
+	}
+}
+
 
 if ( $#ARGV >= 3 and $ARGV[1] eq 'classify' and $ARGV[2] =~ /^\d+$/ and $ARGV[3] =~ /^\d+$/ ) {
 	my $dbh = DBI->connect ( "DBI:SQLite:dbname=$ARGV[0]",'','',{RaiseError=>+1,AutoCommit=>1} ) or die "Can't connect: ".$DBI::errstr;
 	my $classifier = classifier->new ( $dbh, join ( '', <STDIN> ) );
+	stopwordlist ( $classifier );
 	$classifier->{'unbiased'} = 1;
 	my @classes = @ARGV;
 	shift @classes; shift @classes;
@@ -39,6 +55,7 @@ if ( $#ARGV >= 3 and $ARGV[1] eq 'classify' and $ARGV[2] =~ /^\d+$/ and $ARGV[3]
 } elsif ( $#ARGV >= 2 and $#ARGV <= 3 and $ARGV[1] eq 'teach' and $ARGV[2] =~ /^\d+$/ and ( $#ARGV == 2 or $ARGV[3] =~ /^[\d\.]+$/ ) ) {
 	my $dbh = DBI->connect ( "DBI:SQLite:dbname=$ARGV[0]",'','',{RaiseError=>+1,AutoCommit=>1} ) or die "Can't connect: ".$DBI::errstr;
 	my $classifier = classifier->new ( $dbh, join ( '', <STDIN> ) );
+	stopwordlist ( $classifier );
 	if ( $#ARGV == 2 ) {
 		$classifier->teach ( $ARGV[2] );
 	} else {

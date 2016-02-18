@@ -26,9 +26,21 @@
 require_once ( "classifier.php" );
 
 
+# load & apply stoplist if available
+function stopwordlist ( $classifier ) {
+	global $argv;
+	$stopwordpath = dirname($argv[0]).'/stopwords.txt';
+	if ( is_file ( $stopwordpath ) ) {
+		$stopwords = file ( $stopwordpath, FILE_IGNORE_NEW_LINES );
+		$classifier->removestopwords ( $stopwords );
+	}
+}
+
+
 if ( $argc >= 5 and $argv[2] == 'classify' and is_numeric ( $argv[3] ) and is_numeric ( $argv[4] ) ) {
 	$dbh = new PDO ( "sqlite:$argv[1]" );
 	$classifier = new classifier ( $dbh, file_get_contents ( 'php://stdin' ) );
+	stopwordlist ( $classifier );
 	$classifier->unbiased = true;
 	$classes = $argv;
 	array_shift ( $classes ); array_shift ( $classes ); array_shift ( $classes );
@@ -39,6 +51,7 @@ if ( $argc >= 5 and $argv[2] == 'classify' and is_numeric ( $argv[3] ) and is_nu
 } elseif ( $argc >= 4 and $argc <= 5 and $argv[2] == 'teach' and is_numeric ( $argv[3] ) and ( $argc == 4 or is_numeric ( $argv[4] ) ) ) {
 	$dbh = new PDO ( "sqlite:$argv[1]" );
 	$classifier = new classifier ( $dbh, file_get_contents ( 'php://stdin' ) );
+	stopwordlist ( $classifier );
 	if ( $argc == 4 ) {
 		$classifier->teach ( $argv[3] );
 	} else {

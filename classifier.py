@@ -37,6 +37,13 @@ class classifier:
 			self.dbtype = 'MySQL'
 		elif str(type(self.db)) == "<type 'sqlite3.Connection'>":
 			self.dbtype = 'sqlite3'
+	# remove words in given list of stop words
+	def removestopwords ( self, stopwordlist ):
+		for word in stopwordlist:
+			lcword = word.lower()
+			for i in range(self.words.count(lcword)):
+				self.words.remove ( lcword )
+	# teach the classifier about this text
 	def teach ( self, classification, strength=None, ordered=None ):	# eg. 1=>HAM 2=>SPAM
 		if strength == None: strength = 1.0
 		if ordered == None: ordered = True

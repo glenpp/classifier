@@ -38,6 +38,11 @@ class classifier {
 		$this->words = array ();
 		foreach ( preg_split ( '/\W+/', strtolower ( $text ) ) as $s ) { $this->words[] = substr ( $s, 0, 40 ); }	# limit lengths
 	}
+	# remove words in given list of stop words
+	function removestopwords ( $stopwordlist ) {
+		$this->words = array_diff ( $this->words, $stopwordlist );
+	}
+	# teach the classifier about this text
 	function teach ( $classification, $strength=1, $ordered=true ) {	// eg. 1=>HAM 2=>SPAM
 		$prevwordid = NULL;
 		$this->dbh->beginTransaction ();	// start transaction to avoid slow synchronous writes
