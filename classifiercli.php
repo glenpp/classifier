@@ -71,7 +71,7 @@ if ( $argc >= 5 and $argv[2] == 'classify' and is_numeric ( $argv[3] ) and is_nu
 	$classifier = new classifier ( $dbh, '' );
 	$classifier->cleanfrequency ( $argv[3] );
 } else {
-	die ( "Usage: $0 <sqlite file> [teach <classid> [weighting]|classify <classid> <classid> [classid] [...]|updatequality|degrade <factor>]\n\ttext on STDIN\n" );
+	die ( "Usage: $0 <sqlite file> [teach <classid> [weighting]|classify <classid> <classid> [classid] [...]|updatequality|degrade <factor>]\n\ttext on STDIN\n\tIf \"stopwords.txt\" (one per line) exists it will be used\n" );
 }
 
 ?>

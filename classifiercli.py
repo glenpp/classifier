@@ -68,6 +68,6 @@ elif len ( sys.argv ) == 4 and sys.argv[2] == 'cleanfrequency' and re.match ( '^
 	classifier = classifier.classifier ( db, '' )
 	classifier.cleanfrequency ( sys.argv[3] )
 else:
-	sys.exit ( "Usage: %s <sqlite file> [teach <clasid> [weighting]|clasify <clasid> <clasid> [clasid] [...]|updatequality|degrade <factor>|cleanfrequency <threshold>]\n\ttext on STDIN" % sys.argv[0] )
+	sys.exit ( "Usage: %s <sqlite file> [teach <clasid> [weighting]|clasify <clasid> <clasid> [clasid] [...]|updatequality|degrade <factor>|cleanfrequency <threshold>]\n\ttext on STDIN\n\tIf \"stopwords.txt\" (one per line) exists it will be used\n" % sys.argv[0] )
 
 

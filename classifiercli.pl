@@ -75,7 +75,7 @@ if ( $#ARGV >= 3 and $ARGV[1] eq 'classify' and $ARGV[2] =~ /^\d+$/ and $ARGV[3]
 	my $classifier = classifier->new ( $dbh, join ( '', '' ) );
 	$classifier->cleanfrequency ( $ARGV[2] );
 } else {
-	die "Usage: $0 <sqlite file> [teach <classid> [weighting]|classify <classid> <classid> [classid] [...]|updatequality|degrade <factor>]\n\ttext on STDIN\n";
+	die "Usage: $0 <sqlite file> [teach <classid> [weighting]|classify <classid> <classid> [classid] [...]|updatequality|degrade <factor>]\n\ttext on STDIN\n\tIf \"stopwords.txt\" (one per line) exists it will be used\n";
 }
 
 
