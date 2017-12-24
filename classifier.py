@@ -27,10 +27,10 @@ import re
 import time
 
 class classifier:
-    def __init__ ( self, db, text ):
+    def __init__(self, db, text):
         self.db = db;
         self.db.isolation_level = "DEFERRED"
-        self.words = [ s[:40] for s in re.split ( '\W+', text.lower() ) ]    # TODO limit lengths in other flavours TODO
+        self.words = [ s[:40] for s in re.split('\W+', text.lower()) ]    # TODO limit lengths in other flavours TODO
         self.s = 3
         self.unbiased = 0    # give even odds for all clases
         if str(type(self.db)) == "<class 'MySQLdb.connections.Connection'>":
@@ -264,42 +264,42 @@ class classifier:
     def degrade ( self, factor ):    # 0.9 would multiply everything by that
         dbcur = self.db.cursor()
         if self.dbtype == 'MySQL':
-            dbcur.execute ( 'UPDATE ClassifierFrequency SET Frequency = Frequency * %s', [ factor ] )
-            dbcur.execute ( 'UPDATE ClassifierOrderFrequency SET Frequency = Frequency * %s', [ factor ] )
-            dbcur.execute ( 'UPDATE ClassifierClassSamples SET Frequency = Frequency * %s', [ factor ] )
+            dbcur.execute('UPDATE ClassifierFrequency SET Frequency = Frequency * %s', [ factor ])
+            dbcur.execute('UPDATE ClassifierOrderFrequency SET Frequency = Frequency * %s', [ factor ])
+            dbcur.execute('UPDATE ClassifierClassSamples SET Frequency = Frequency * %s', [ factor ])
         else:
-            dbcur.execute ( 'UPDATE ClassifierFrequency SET Frequency = Frequency * :factor', [ factor ] )
-            dbcur.execute ( 'UPDATE ClassifierOrderFrequency SET Frequency = Frequency * :factor', [ factor ] )
-            dbcur.execute ( 'UPDATE ClassifierClassSamples SET Frequency = Frequency * :factor', [ factor ] )
+            dbcur.execute('UPDATE ClassifierFrequency SET Frequency = Frequency * :factor', [ factor ])
+            dbcur.execute('UPDATE ClassifierOrderFrequency SET Frequency = Frequency * :factor', [ factor ])
+            dbcur.execute('UPDATE ClassifierClassSamples SET Frequency = Frequency * :factor', [ factor ])
         self.db.commit()    # finish transaction to avoid slow synchronous writes
     # remove words below a certain frequency (unlikely to be of value)
-    def cleanfrequency ( self, threshold ):
+    def cleanfrequency(self, threshold):
         dbcur = self.db.cursor()
         if self.dbtype == 'MySQL':
-            dbcur.execute ( 'DELETE FROM ClassifierFrequency WHERE Frequency < %s', [ threshold ] )
-            dbcur.execute ( 'DELETE FROM ClassifierOrderFrequency WHERE Frequency < %s', [ threshold ] )
+            dbcur.execute('DELETE FROM ClassifierFrequency WHERE Frequency < %s', [ threshold ])
+            dbcur.execute('DELETE FROM ClassifierOrderFrequency WHERE Frequency < %s', [ threshold ])
         else:
-            dbcur.execute ( 'DELETE FROM ClassifierFrequency WHERE Frequency < :threshold', [ threshold ] )
-            dbcur.execute ( 'DELETE FROM ClassifierOrderFrequency WHERE Frequency < :threshold', [ threshold ] )
-        dbcur.execute ( 'DELETE FROM ClassifierWords WHERE id NOT IN (SELECT Word FROM ClassifierFrequency) AND id NOT IN (SELECT Word FROM ClassifierOrderFrequency) AND id NOT IN (SELECT PrevWord FROM ClassifierOrderFrequency WHERE PrevWord IS NOT NULL)' )
+            dbcur.execute('DELETE FROM ClassifierFrequency WHERE Frequency < :threshold', [ threshold ])
+            dbcur.execute('DELETE FROM ClassifierOrderFrequency WHERE Frequency < :threshold', [ threshold ])
+        dbcur.execute('DELETE FROM ClassifierWords WHERE id NOT IN (SELECT Word FROM ClassifierFrequency) AND id NOT IN (SELECT Word FROM ClassifierOrderFrequency) AND id NOT IN (SELECT PrevWord FROM ClassifierOrderFrequency WHERE PrevWord IS NOT NULL)')
         self.db.commit()    # finish transaction to avoid slow synchronous writes
     # remove words below a certain quality (unlikely to be of value) TODO this is tricky since they may just be new ones
     # calculate quality factor for words
-    def updatequality ( self, limit=None ):    # how many words to process (oldest first)
+    def updatequality(self, limit=None):    # how many words to process (oldest first)
         dbcur = self.db.cursor()
         # get clases
         dbcur.execute ( 'SELECT DISTINCT Class FROM ClassifierFrequency' );
         classifications = [ row[0] for row in dbcur.fetchall() ]
-        qualityfactor = len( classifications )
+        qualityfactor = len(classifications)
         # we need to know how many samples of each clas to level the instances
         messages = {}
         total = 0.0
         bindclassifications = ''
         for clas in classifications:
             if self.dbtype == 'MySQL':
-                dbcur.execute ( 'SELECT Frequency FROM ClassifierClassSamples WHERE Class = %s', [ clas ] );
+                dbcur.execute('SELECT Frequency FROM ClassifierClassSamples WHERE Class = %s', [ clas ]);
             else:
-                dbcur.execute ( 'SELECT Frequency FROM ClassifierClassSamples WHERE Class = ?', [ clas ] );
+                dbcur.execute('SELECT Frequency FROM ClassifierClassSamples WHERE Class = ?', [ clas ]);
             result = dbcur.fetchone ()
             if result == None:
                 # never seen this clas before - can't clasify
@@ -317,12 +317,12 @@ class classifier:
             overallprob[clas] = messages[clas] / total
         # get words
         if limit != None:
-            if limit.isdigit():
-                dbcur.execute ( 'SELECT Word FROM ClassifierWords ORDER BY LastUpdated LIMIT %d' % limit )
+            if type(limit) is int or limit.isdigit():
+                dbcur.execute('SELECT Word FROM ClassifierWords ORDER BY LastUpdated LIMIT %d' % limit)
             else:
                 return None
         else:
-            dbcur.execute ( 'SELECT Word FROM ClassifierWords ORDER BY LastUpdated' );
+            dbcur.execute('SELECT Word FROM ClassifierWords ORDER BY LastUpdated');
         words = [ row[0] for row in dbcur.fetchall() ]
         # process each word
         for word in words:
@@ -330,9 +330,9 @@ class classifier:
             parameters = [ word ]
             parameters.extend ( classifications )
             if self.dbtype == 'MySQL':
-                dbcur.execute ( 'SELECT Class,Frequency FROM ClassifierFrequency WHERE Word = (SELECT id FROM ClassifierWords WHERE Word = %s) AND Class IN ('+bindclassifications+')', parameters );
+                dbcur.execute('SELECT Class,Frequency FROM ClassifierFrequency WHERE Word = (SELECT id FROM ClassifierWords WHERE Word = %s) AND Class IN ('+bindclassifications+')', parameters);
             else:
-                dbcur.execute ( 'SELECT Class,Frequency FROM ClassifierFrequency WHERE Word = (SELECT id FROM ClassifierWords WHERE Word = ?) AND Class IN ('+bindclassifications+')', parameters );
+                dbcur.execute('SELECT Class,Frequency FROM ClassifierFrequency WHERE Word = (SELECT id FROM ClassifierWords WHERE Word = ?) AND Class IN ('+bindclassifications+')', parameters);
             results = dbcur.fetchall()
             wordfrequency = {}
             total = 0.0
@@ -360,15 +360,15 @@ class classifier:
                     quality = abs ( probability - 1.0/qualityfactor ) * qualityfactor
                     if quality > maxquality: maxquality = quality
                 if self.dbtype == 'MySQL':
-                    dbcur.execute ( 'UPDATE ClassifierWords SET Quality = %s, LastUpdated = %s WHERE Word = %s', [ maxquality, int(time.time()), word ] )
+                    dbcur.execute('UPDATE ClassifierWords SET Quality = %s, LastUpdated = %s WHERE Word = %s', [ maxquality, int(time.time()), word ])
                 else:
-                    dbcur.execute ( 'UPDATE ClassifierWords SET Quality = :quality, LastUpdated = :time WHERE Word = :word', [ maxquality, int(time.time()), word ] )
+                    dbcur.execute('UPDATE ClassifierWords SET Quality = :quality, LastUpdated = :time WHERE Word = :word', [ maxquality, int(time.time()), word ])
             else:
 # TODO                print STDERR "WARNING - ".__FILE__." - no Frequency data for word \"$word\"\n";
                 if self.dbtype == 'MySQL':
-                    dbcur.execute ( 'UPDATE ClassifierWords SET LastUpdated = %s WHERE Word = %s', [ int(time.time()), word ] )
+                    dbcur.execute('UPDATE ClassifierWords SET LastUpdated = %s WHERE Word = %s', [ int(time.time()), word ])
                 else:
-                    dbcur.execute ( 'UPDATE ClassifierWords SET LastUpdated = :time WHERE Word = :word', [ int(time.time()), word ] )
+                    dbcur.execute('UPDATE ClassifierWords SET LastUpdated = :time WHERE Word = :word', [ int(time.time()), word ])
         self.db.commit()    # finish transaction to avoid slow synchronous writes
 
 
