@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 #
 #
 # Copyright (C) 2015  Glen Pitt-Pladdy
@@ -22,52 +22,53 @@
 # Previously: https://www.pitt-pladdy.com/blog/_20111229-214727_0000_Bayesian_Classifier_Classes_for_Perl_and_PHP/
 #
 
-import classifier
-import sqlite3
+from __future__ import print_function
 import sys
-import re
 import os
+import re
+import sqlite3
+import classifier
 
 
 # load & apply stoplist if available
-def stopwordlist ( classifier ):
-	stopwordpath = os.path.join ( os.path.dirname ( sys.argv[0] ), 'stopwords.txt' )
-	with open ( stopwordpath, 'rt' ) as f:
-		stopwords = [ w.strip() for w in f ]
-		classifier.removestopwords ( stopwords )
+def stopwordlist(classifier):
+    stopwordpath = os.path.join(os.path.dirname(sys.argv[0]), 'stopwords.txt')
+    with open(stopwordpath, 'rt') as f_stopowrds:
+        stopwords = [w.strip() for w in f_stopowrds]
+        classifier.removestopwords(stopwords)
 
 
 if len(sys.argv) >= 5 and sys.argv[2] == 'classify' and sys.argv[3].isdigit() and sys.argv[4].isdigit():
-	db = sqlite3.connect ( sys.argv[1] )
-	classifier = classifier.classifier ( db, sys.stdin.read() )
-	stopwordlist ( classifier )
-	classifier.unbiased = True
-	clases = [ int(x) for x in sys.argv[3:] ]
-	prob = classifier.classify ( clases )
-	for clas in clases:
-		print "class%d: %f" % ( clas, prob[clas] )
-elif len ( sys.argv ) >= 4 and len ( sys.argv ) <= 5 and sys.argv[2] == 'teach' and sys.argv[3].isdigit():
-	db = sqlite3.connect ( sys.argv[1] )
-	classifier = classifier.classifier ( db, sys.stdin.read() )
-	stopwordlist ( classifier )
-	if len ( sys.argv ) >= 4:
-		classifier.teach ( int(sys.argv[3]) )
-	else:
-		classifier.teach ( int(sys.argv[3]), float ( sys.argv[4] ) )
-elif len ( sys.argv ) == 3 and sys.argv[2] == 'updatequality':
-	db = sqlite3.connect ( sys.argv[1] )
-	classifier = classifier.classifier ( db, '' )
-	classifier.unbiased = True
-	classifier.updatequality ()
-elif len ( sys.argv ) == 4 and sys.argv[2] == 'degrade' and re.match ( '^\d+(\.\d+)?$', sys.argv[3] ):
-	db = sqlite3.connect ( sys.argv[1] )
-	classifier = classifier.classifier ( db, '' )
-	classifier.degrade ( sys.argv[3] )
-elif len ( sys.argv ) == 4 and sys.argv[2] == 'cleanfrequency' and re.match ( '^\d+(\.\d+)?$', sys.argv[3] ):
-	db = sqlite3.connect ( sys.argv[1] )
-	classifier = classifier.classifier ( db, '' )
-	classifier.cleanfrequency ( sys.argv[3] )
+    db = sqlite3.connect(sys.argv[1])
+    classifier = classifier.Classifier(db, sys.stdin.read())
+    stopwordlist(classifier)
+    classifier.unbiased = True
+    clases = [int(x) for x in sys.argv[3:]]
+    prob = classifier.classify(clases)
+    for clas in clases:
+        print("class{:d}: {:f}".format(clas, prob[clas]))
+elif len(sys.argv) >= 4 and len(sys.argv) <= 5 and sys.argv[2] == 'teach' and sys.argv[3].isdigit():
+    db = sqlite3.connect(sys.argv[1])
+    classifier = classifier.Classifier(db, sys.stdin.read())
+    stopwordlist(classifier)
+    if len(sys.argv) >= 4:
+        classifier.teach(int(sys.argv[3]))
+    else:
+        classifier.teach(int(sys.argv[3]), float(sys.argv[4]))
+elif len(sys.argv) == 3 and sys.argv[2] == 'updatequality':
+    db = sqlite3.connect(sys.argv[1])
+    classifier = classifier.Classifier(db, '')
+    classifier.unbiased = True
+    classifier.updatequality()
+elif len(sys.argv) == 4 and sys.argv[2] == 'degrade' and re.match(r'^\d+(\.\d+)?$', sys.argv[3]):
+    db = sqlite3.connect(sys.argv[1])
+    classifier = classifier.Classifier(db, '')
+    classifier.degrade(sys.argv[3])
+elif len(sys.argv) == 4 and sys.argv[2] == 'cleanfrequency' and re.match(r'^\d+(\.\d+)?$', sys.argv[3]):
+    db = sqlite3.connect(sys.argv[1])
+    classifier = classifier.Classifier(db, '')
+    classifier.cleanfrequency(sys.argv[3])
 else:
-	sys.exit ( "Usage: %s <sqlite file> [teach <clasid> [weighting]|clasify <clasid> <clasid> [clasid] [...]|updatequality|degrade <factor>|cleanfrequency <threshold>]\n\ttext on STDIN\n\tIf \"stopwords.txt\" (one per line) exists it will be used\n" % sys.argv[0] )
+    sys.exit("Usage: %s <sqlite file> [teach <clasid> [weighting]|clasify <clasid> <clasid> [clasid] [...]|updatequality|degrade <factor>|cleanfrequency <threshold>]\n\ttext on STDIN\n\tIf \"stopwords.txt\" (one per line) exists it will be used\n" % sys.argv[0])
 
 
