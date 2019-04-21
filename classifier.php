@@ -357,6 +357,7 @@ class classifier {
 			$wordfrequency = array ();
 			$total = 0;
 			foreach ( $classifications as $class ) {
+				if ( $messages[$class] == 0 ) { continue; }
 				if ( isset ( $results[$class][0]['Frequency'] ) ) {
 					$wordfrequency[$class] = $results[$class][0]['Frequency'] / $messages[$class];
 					$total += $results[$class][0]['Frequency'];

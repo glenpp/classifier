@@ -381,6 +381,7 @@
 			my %wordfrequency;
 			$total = 0;
 			foreach my $class (@$classifications) {
+				if ( $messages[$$class[0]] == 0 ) { next; }
 				if ( defined $$results{$$class[0]}{'Frequency'} ) {
 					$wordfrequency{$$class[0]} = $$results{$$class[0]}->{'Frequency'} / $messages[$$class[0]];
 					$total += $$results{$$class[0]}->{'Frequency'};
