@@ -28,10 +28,11 @@ import sys
 import re
 import time
 
-def classifier(*args):
-    # TODO backward compatibility
+def classifier(db, text):
+    """temporary backward compatibility
+    """
     print("Stop using deprecated classifier()", file=sys.stderr)
-    return Classifier(*args)
+    return Classifier(db, text)
 class Classifier:
     def __init__(self, db, text):
         self.db = db
