@@ -60,7 +60,7 @@ TEXT7
 	echo Data 1 ClassifierWords
 	sqlite3 _test_${1}.sqlite3 'SELECT * FROM ClassifierWords' | wc -l
 	# remove quality update time, truncate quality decimal places
-	sqlite3 _test_${1}.sqlite3 'SELECT * FROM ClassifierWords' | sed 's/|\([0-9]\+\(\.[0-9]\{0,6\}\)\?\)[0-9]*|[0-9]\+$/|\1|_timeremoved_/' | md5sum
+	sqlite3 -cmd '.mode list' _test_${1}.sqlite3 'SELECT * FROM ClassifierWords' | sed 's/|\([0-9]\+\(\.[0-9]\{0,6\}\)\?\)[0-9]*|[0-9]\+$/|\1|_timeremoved_/' | md5sum
 	echo Data 2 ClassifierClassSamples
 	sqlite3 _test_${1}.sqlite3 'SELECT * FROM ClassifierClassSamples' | wc -l
 	sqlite3 _test_${1}.sqlite3 'SELECT * FROM ClassifierClassSamples' | md5sum
