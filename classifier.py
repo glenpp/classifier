@@ -1,27 +1,27 @@
-#
-#
-# Copyright (C) 2015  Glen Pitt-Pladdy
-#
-# This library is free software; you can redistribute it and/or
-# modify it under the terms of the GNU Lesser General Public
-# License as published by the Free Software Foundation; either
-# version 2.1 of the License, or (at your option) any later version.
-#
-# This library is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-# Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public
-# License along with this library; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
-#
-#
-# See: https://www.pitt-pladdy.com/blog/_20150707-214047_0100_Bayesian_Classifier_Classes_for_Python/
-# Previously: https://www.pitt-pladdy.com/blog/_20111229-214727_0000_Bayesian_Classifier_Classes_for_Perl_and_PHP/
-#
+"""
+Copyright (C) 2015  Glen Pitt-Pladdy
 
-# based on: http://en.wikipedia.org/wiki/Bayesian_spam_filtering#Computing_the_probability_that_a_message_containing_a_given_word_is_spam
+This library is free software; you can redistribute it and/or
+modify it under the terms of the GNU Lesser General Public
+License as published by the Free Software Foundation; either
+version 2.1 of the License, or (at your option) any later version.
+
+This library is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+Lesser General Public License for more details.
+
+You should have received a copy of the GNU Lesser General Public
+License along with this library; if not, write to the Free Software
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+
+
+See: https://www.pitt-pladdy.com/blog/_20150707-214047_0100_Bayesian_Classifier_Classes_for_Python/
+Previously: https://www.pitt-pladdy.com/blog/_20111229-214727_0000_Bayesian_Classifier_Classes_for_Perl_and_PHP/
+
+based on: http://en.wikipedia.org/wiki/Bayesian_spam_filtering#Computing_the_probability_that_a_message_containing_a_given_word_is_spam
+"""
+
 
 from __future__ import print_function
 import sys
@@ -39,7 +39,7 @@ class Classifier:
         self.db.isolation_level = "DEFERRED"
         self.words = [s[:40] for s in re.split(r'\W+', text.lower())]    # TODO limit lengths in other flavours TODO
         self.s = 3
-        self.unbiased = 0    # give even odds for all clases
+        self.unbiased = False    # give even odds for all clases
         if str(type(self.db)) == "<class 'MySQLdb.connections.Connection'>":
             self.dbtype = 'MySQL'
         elif str(type(self.db)) in ["<class 'sqlite3.Connection'>", "<type 'sqlite3.Connection'>"]:
@@ -266,9 +266,9 @@ class Classifier:
             total += prob[clas]
             totalorder += proborder[clas]
         # avoid divide by Zero - we have probably rounded if this happens
-        if total == 0:
+        if total == 0.0:
             total = 1.0
-        if totalorder == 0:
+        if totalorder == 0.0:
             totalorder = 1.0
         # convert to normal probabilities
         for clas in classifications:
@@ -278,7 +278,7 @@ class Classifier:
 #            print STDERR "scores: $clas => $prob[$clas]\n"
 #            print STDERR "scoresorder: $clas => $proborder[$clas]\n"
         # combine
-        if useorder > 0:
+        if useorder > 0.0:
             usefreq = 1.0 - useorder
             for clas in classifications:
                 probfreqweighted = prob[clas]**usefreq
